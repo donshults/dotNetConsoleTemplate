@@ -25,7 +25,7 @@ namespace dotNetConsole
                 {
                     services.AddLogging(configure => configure.AddConsole() );
                     //services.AddHttpClient();
-                    services.AddTransient<DemoService>();
+                    services.AddTransient<DemoHttpService>();
                 }).Build();
            
             using (var serviceScope = hostBuilder.Services.CreateScope())
@@ -33,7 +33,7 @@ namespace dotNetConsole
                 var services = serviceScope.ServiceProvider;
                 try
                 {
-                    var demoService = services.GetService<DemoService>();
+                    var demoService = services.GetService<DemoHttpService>();
                     await demoService.Run();
                     Console.WriteLine("Success");
                 }

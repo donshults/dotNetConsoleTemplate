@@ -13,13 +13,13 @@ using System.Xml.Serialization;
 
 namespace dotNetConsole.Services
 {
-    public class DemoService : IIntegrationService
+    public class DemoHttpService : IIntegrationService
     {
         private static HttpClient _httpClient = new HttpClient();
         private readonly ILogger _logger;
         private readonly IConfiguration _config;
 
-        public DemoService(ILogger<DemoService> logger, IConfiguration config)
+        public DemoHttpService(ILogger<DemoHttpService> logger, IConfiguration config)
         {
             _logger = logger;
             _config = config;
@@ -33,11 +33,11 @@ namespace dotNetConsole.Services
 
         public async Task Run()
         {
-            //await GetResource();
+            await GetResource();
             //await GetResourceThroughHttpRequestMessage();
             //await CreateResource();
             //await UpdateResource();
-            await DeleteResource();
+            //await DeleteResource();
         }
 
         public async Task GetResource()
