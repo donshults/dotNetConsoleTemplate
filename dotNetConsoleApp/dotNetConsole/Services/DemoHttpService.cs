@@ -23,8 +23,6 @@ namespace dotNetConsole.Services
         {
             _logger = logger;
             _config = config;
-            //_httpClient = httpClient;
-            // set up HttpClient instance
             var test = _config["hostUrl"];
             _httpClient.BaseAddress = new Uri(_config.GetValue<string>("hostUrl"));
             _httpClient.Timeout = new TimeSpan(0, 0, 30);

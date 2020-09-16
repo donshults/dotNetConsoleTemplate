@@ -26,6 +26,7 @@ namespace dotNetConsole
                     services.AddLogging(configure => configure.AddConsole() );
                     //services.AddHttpClient();
                     services.AddTransient<DemoHttpService>();
+                    services.AddTransient<PartialUpdateService>();
                 }).Build();
            
             using (var serviceScope = hostBuilder.Services.CreateScope())
@@ -33,8 +34,10 @@ namespace dotNetConsole
                 var services = serviceScope.ServiceProvider;
                 try
                 {
-                    var demoService = services.GetService<DemoHttpService>();
-                    await demoService.Run();
+                    //var demoService = services.GetService<DemoHttpService>();
+                    //await demoService.Run();
+                    var patchService = services.GetService<PartialUpdateService>();
+                    await patchService.Run();
                     Console.WriteLine("Success");
                 }
                 catch (Exception ex)
