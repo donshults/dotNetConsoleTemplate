@@ -82,53 +82,13 @@ namespace dotNetConsole.Auth
 
             return dateTimeWithTZ.ToString("g");
         }
-    }
 
-    public class ClientCredentialsProvider : IAuthenticationProvider
-    {
-        private IConfidentialClientApplication _msalClient;
-        private string[] _scopes;
-        private readonly ILogger _log;
-
-        public ClientCredentialsProvider(string appId, string tenantId, string clientSecret, string[] scopes, ILogger log, out string accessToken)
+        static async Task GetMyInfo(GraphServiceClient graphClient, ILogger logger)
         {
-            _scopes = scopes;
-            _log = log;
-
-            _msalClient = ConfidentialClientApplicationBuilder
-                .Create(appId)
-                .WithAuthority(AzureCloudInstance.AzurePublic, tenantId)
-                .WithClientSecret(clientSecret)
-                .Build();
-            accessToken = GetAccessToken().Result;
+            var user = await graphClient.Me
+                .Request()
+                .GetAsync();
+            logger.LogInformation($"Name: {user.DisplayName}");
         }
-
-        public async Task<string> GetAccessToken()
-        {
-            string[] scopes = new string[] { "https://graph.microsoft.com/.default" };
-            AuthenticationResult result = null;
-            try
-            {
-                result = await _msalClient.AcquireTokenForClient(scopes)
-                    .ExecuteAsync();
-                return result.AccessToken;
-            }
-            catch (Exception exception)
-            {
-                _log.LogError($"Error getting access token: {exception.Message}");
-                return null;
-            }
-        }
-
-        // This is the required function to implement IAuthenticationProvider
-        // The Graph SDK will call this function each time it makes a Graph
-        // call.
-        public async Task AuthenticateRequestAsync(HttpRequestMessage requestMessage)
-        {
-            requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("bearer", await GetAccessToken());
-            requestMessage.Headers.Add("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
-        }
-
     }
 }

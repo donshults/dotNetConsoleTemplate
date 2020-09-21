@@ -49,7 +49,7 @@ namespace dotNetConsole.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error Trying to get Root Site Info");
+                _logger.LogError($"Error Trying to get Root Site Info {ex.Message}");
             }
 
             return rootSite;

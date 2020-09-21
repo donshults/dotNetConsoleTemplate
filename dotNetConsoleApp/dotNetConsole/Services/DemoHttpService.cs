@@ -32,7 +32,7 @@ namespace dotNetConsole.Services
         private GraphServiceClient graphClient;
         private object siteId;
         private O365SiteServices siteServices;
-        public object rootSiteInfo { get; private set; }
+        public SiteModel rootSiteInfo { get; private set; }
 
         public DemoHttpService(ILogger<DemoHttpService> logger, IConfiguration config)
         {
@@ -46,7 +46,9 @@ namespace dotNetConsole.Services
 
         public async Task Run()
         {
+
             InitServices(_logger);
+ 
             DemoProcess();
             //await GetResource();
             //await GetResourceThroughHttpRequestMessage();
@@ -61,7 +63,7 @@ namespace dotNetConsole.Services
             _logger.LogInformation($"Staring Main Process ");
             if (!String.IsNullOrEmpty(siteUrl))
             {
-                rootSiteInfo = siteServices.GetRootSiteInfo(siteUrl);
+                rootSiteInfo = siteServices.GetRootSiteInfo(siteUrl).Result;
                 Console.WriteLine($"Site Name: {rootSiteInfo}");
             }
         }
@@ -211,6 +213,7 @@ namespace dotNetConsole.Services
 
             //siteId = listServices.GetSiteId(siteUrl).Result;
             siteServices = new O365SiteServices(graphClient, siteUrl, logger);
+            Console.WriteLine($"WebSite: {siteServices.SiteModel.DisplayName}");
         }
     }
 }
