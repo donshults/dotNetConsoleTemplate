@@ -45,5 +45,7 @@ namespace dotNetConsole.Auth
         /// - or 'organizations' (for a multi-tenant application)
         /// </summary>
         string Tenant { get; set; }
+
+        AuthenticationConfig ReadFromJsonFile(string path);
     }
 }

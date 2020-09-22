@@ -2,14 +2,10 @@
 using dotNetConsole.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Identity.Client;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
 using System.Linq;
-using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Directory = System.IO.Directory;
@@ -20,113 +16,50 @@ namespace dotNetConsole
     {
         private static AuthenticationConfig _authConfig;
 
+        public static ServiceProvider _serviceProvider { get; private set; }
+
         static async Task Main(string[] args)
         {
-
             Console.WriteLine("Demo Console with DI");
             string testvalue = "Hello";
 
-            //Config Read for Authentication
-            //var config = AuthenticationConfig.ReadFromJsonFile("appsettings.json");
-            //Config Read for Normal
-            var baseBuilder = new ConfigurationBuilder();
-            BuildConfig(baseBuilder);
-
-            //Setup Serilog
-            Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(baseBuilder.Build())
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
-                .CreateLogger();
-
-            Log.Logger.Information($"Application Starting {testvalue}");
-    
-            //Setup DI
-            var host = Host.CreateDefaultBuilder()
-                .ConfigureServices((context, services) =>
-                {
-                    services.AddTransient<IAuthenticationConfig, AuthenticationConfig>();
-                    services.AddTransient<IGraphConnectDemo, GraphConnectDemo>();
-                })
-                .UseSerilog()
-                .Build();
-
-            var authResult = await AuthenticateSvcAsync();
-
-
-            var svc = ActivatorUtilities.CreateInstance<GraphConnectDemo>(host.Services);
-            svc.Run(authResult);
-
+            RegisterServices();
+            IServiceScope scope = _serviceProvider.CreateScope();
+            scope.ServiceProvider.GetRequiredService<ConsoleApplication>().Run();
+            DisposeServices();
         }
 
-        private static async Task<AuthenticationResult> AuthenticateSvcAsync()
+        private static void RegisterServices()
         {
-            AuthenticationConfig config = AuthenticationConfig.ReadFromJsonFile("appsettings.json");   
-            
-            bool isUseringClientSecret = AppUsesClientSecret(config);
-            // Even if this is a console application here, a daemon application is a confidential client application
-            IConfidentialClientApplication app;
-
-            if (isUseringClientSecret)
-            {
-                app = ConfidentialClientApplicationBuilder.Create(config.ClientId)
-                    .WithClientSecret(config.ClientSecret)
-                    .WithAuthority(new Uri(config.Authority))
-                    .Build();
-            }
-            else
-            {
-                X509Certificate2 certificate = ReadCertificate(config.CertificateName);
-                app = ConfidentialClientApplicationBuilder.Create(config.ClientId)
-                    .WithCertificate(certificate)
-                    .WithAuthority(new Uri(config.Authority))
-                    .Build();
-            }
-
-            string[] scopes = new string[] { $"{config.ApiUrl}.default" };
-
-            AuthenticationResult result = null;
-            try
-            {
-                result = await app.AcquireTokenForClient(scopes).ExecuteAsync();
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Token acquired");
-                Console.ResetColor();
-            }
-            catch (MsalClientException ex) when (ex.Message.Contains("AADSTS70011"))
-            {
-                // Invalid scope. The scope has to be of the form "https://resourceurl/.default"
-                // Mitigation: change the scope to be as expected
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Scope provided is not supported");
-                Console.ResetColor();
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.ResetColor();
-            }
-
-            if (result != null)
-            {
-                var httpClient = new HttpClient();
-                var apiCaller = new ProtectedApiCallHelper(httpClient);
-                await apiCaller.CallWebApiAndProcessResultASync($"{config.ApiUrl}v1.0/users", result.AccessToken, Display);
-            }
-            return result;
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddHttpClient();
+            services.AddSingleton<ICustomer, Customer>();
+            services.AddSingleton<IAuthenticationConfig, AuthenticationConfig>();
+            services.AddSingleton<ConsoleApplication>();
+            _serviceProvider = services.BuildServiceProvider(true);
         }
 
-        static void BuildConfig(IConfigurationBuilder builder) 
+        private static void DisposeServices()
+        {
+            if(_serviceProvider == null)
+            {
+                return;
+            }
+            if(_serviceProvider is IDisposable)
+            {
+                ((IDisposable)_serviceProvider).Dispose();
+            }
+        }
+
+        static void BuildConfig(IConfigurationBuilder builder)
         {
             builder.SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
                 .AddEnvironmentVariables()
-                .Build() ;
+                .Build();
         }
-
-
 
         /// <summary>
         /// Display the result of the Web API call
@@ -164,7 +97,6 @@ namespace dotNetConsole
             else
                 throw new Exception("You must choose between using client secret or certificate. Please update appsettings.json file.");
         }
-
         private static X509Certificate2 ReadCertificate(string certificateName)
         {
             if (string.IsNullOrWhiteSpace(certificateName))

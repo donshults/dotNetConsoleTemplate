@@ -8,6 +8,6 @@ namespace dotNetConsole.Services
 {
     public interface IGraphConnectDemo
     {
-        Task Run(AuthenticationResult result);
+        void Run();
     }
 }
