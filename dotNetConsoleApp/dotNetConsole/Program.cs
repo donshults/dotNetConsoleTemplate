@@ -1,10 +1,8 @@
 ﻿using dotNetConsole.Auth;
-using dotNetConsole.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
-using Serilog;
 using System;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -15,101 +13,35 @@ namespace dotNetConsole
 {
     class Program
     {
-        private static AuthenticationConfig _authConfig;
-
-        public static ServiceProvider _serviceProvider { get; private set; }
+        private static ServiceProvider _serviceProvider { get; set; }
 
         static async Task Main(string[] args)
         {
+            /*
+             * Setup Console App to use Dependency Injection
+             * Creates a entry point called ConsoleApplication
+             *
+             */
             var services = new ServiceCollection();
-            ConfigureService(services);
+            Startup.ConfigureService(services);
 
-            var serviceProvider = services.BuildServiceProvider();
+            _serviceProvider = services.BuildServiceProvider();
 
             Console.WriteLine("Demo Console with DI");
             string testvalue = "Hello";
 
             try
             {
-                await serviceProvider.GetService<ConsoleApplication>().Run();
+                await _serviceProvider.GetService<ConsoleApplication>().Run();
             }
             catch (Exception ex)
             {
-                var logger = serviceProvider.GetService<ILogger<Program>>();
+                var logger = _serviceProvider.GetService<ILogger<Program>>();
                 throw;
             }
 
-           // IServiceScope scope = _serviceProvider.CreateScope();
-           // scope.ServiceProvider.GetRequiredService<ConsoleApplication>().Run();
-           // DisposeServices();
+           Startup.DisposeServices();
             
-        }
-
-        private static void ConfigureService(ServiceCollection services)
-        {
-            
-            services.AddLogging();
-            services.AddHttpClient("MoviesClient", client =>
-            {
-                client.BaseAddress = new Uri("http://localhost:57863");
-                client.Timeout = new TimeSpan(0, 0, 30);
-                client.DefaultRequestHeaders.Clear();
-            });
-            services.AddSingleton<IAPIClient, APIClient>();
-            services.AddSingleton<ICustomer, Customer>();
-            services.AddSingleton<IAuthenticationConfig, AuthenticationConfig>();
-            services.AddSingleton<ConsoleApplication>();
-            _serviceProvider = services.BuildServiceProvider(true);
-        }
-
-        //private static void RegisterServices()
-        //{
-        //    var services = new ServiceCollection();
-        //    services.AddLogging();
-        //    services.AddHttpClient("MoviesClient", client =>
-        //    {
-        //        client.BaseAddress = new Uri("http://localhost:57863");
-        //        client.Timeout = new TimeSpan(0, 0, 30);
-        //        client.DefaultRequestHeaders.Clear();
-        //    });
-        //    //services.AddSingleton<IAPIClient, APIClient>();
-        //    services.AddSingleton<ICustomer, Customer>();
-        //    services.AddSingleton<IAuthenticationConfig, AuthenticationConfig>();
-        //    services.AddSingleton<ConsoleApplication>();
-        //    _serviceProvider = services.BuildServiceProvider(true);
-        //}
-
-        private static void DisposeServices()
-        {
-            if(_serviceProvider == null)
-            {
-                return;
-            }
-            if(_serviceProvider is IDisposable)
-            {
-                ((IDisposable)_serviceProvider).Dispose();
-            }
-        }
-
-        static void BuildConfig(IConfigurationBuilder builder)
-        {
-            builder.SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
-                .AddEnvironmentVariables()
-                .Build();
-        }
-
-        /// <summary>
-        /// Display the result of the Web API call
-        /// </summary>
-        /// <param name="result">Object to display</param>
-        private static void Display(JObject result)
-        {
-            foreach (JProperty child in result.Properties().Where(p => !p.Name.StartsWith("@")))
-            {
-                Console.WriteLine($"{child.Name} = {child.Value}");
-            }
         }
 
         /// <summary>

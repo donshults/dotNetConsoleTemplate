@@ -53,7 +53,5 @@ namespace dotNetConsole.Auth
                 new AuthenticationHeaderValue("bearer", await GetAccessToken());
             requestMessage.Headers.Add("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
         }
-
-
     }
 }

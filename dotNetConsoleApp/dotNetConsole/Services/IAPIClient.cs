@@ -8,7 +8,7 @@ namespace dotNetConsole.Services
 {
     public interface IAPIClient
     {
-        Task GetUsers(AuthenticationResult result, Action<JObject> processResult);
-        Task GetMoviesWithHttpClientFromFactory();
+        Task GetUsers(AuthenticationResult result, CancellationTokenSource _cancellationTokenSource, Action<JObject> processResult);
+        Task GetUsers(AuthenticationResult result, CancellationTokenSource _cancellationTokenSource);
     }
 }

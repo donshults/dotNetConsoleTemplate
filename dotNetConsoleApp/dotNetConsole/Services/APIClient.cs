@@ -28,10 +28,9 @@ namespace dotNetConsole.Services
         {
             _httpClientFactory = httpClientFactory;
             _config = authConfig;
-            //_result = result;
             webAPIUrl = $"{_config.ApiUrl}v1.0/users";
         }
-        public async Task GetUsers(AuthenticationResult result, Action<JObject> processResult)
+        public async Task GetUsers(AuthenticationResult result, CancellationTokenSource _cancellationTokenSource, Action<JObject> processResult)
         {
             var httpClient = _httpClientFactory.CreateClient();
             var request = new HttpRequestMessage(HttpMethod.Get, webAPIUrl);
@@ -44,36 +43,62 @@ namespace dotNetConsole.Services
 
             using (var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
             {
+                //Read as string
                 var json = await response.Content.ReadAsStringAsync();
-
                 JObject newResult = JsonConvert.DeserializeObject(json) as JObject;
-                processResult(newResult);             
+                processResult(newResult);
+                //Read as stream
+                response.EnsureSuccessStatusCode();
+                //JObject newResult = new JObject();
+                //var jsonStream = await response.Content.ReadAsStreamAsync();
+                //using (var streamReader = new StreamReader(jsonStream))
+                //{
+                //    using (var jsonTextReader = new JsonTextReader(streamReader))
+                //    {
+                //        var jsonSerialilzer = new JsonSerializer();
+                //        newResult = jsonSerialilzer.Deserialize(jsonTextReader) as JObject;
+                //    }
+                //}
+
+                //foreach(var keypair in newResult)
+                //{
+                //    Console.WriteLine($"Key:{keypair.Key} Value: {keypair.Value}");
+                //}
+
+                //processResult(users);
             }
         }
 
-        public async Task GetMoviesWithHttpClientFromFactory()
+        public async Task GetUsers(AuthenticationResult result, CancellationTokenSource cancellationTokenSource)
         {
-            var httpClient = _httpClientFactory.CreateClient();
+            var httpClient = _httpClientFactory.CreateClient("MyHttpClient");
+            var request = new HttpRequestMessage(HttpMethod.Get, webAPIUrl);
+            var defaultRequestHeaders = httpClient.DefaultRequestHeaders;
+            if (defaultRequestHeaders.Accept == null || !defaultRequestHeaders.Accept.Any(m => m.MediaType == "application/json"))
+            {
+                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            }
+            defaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", result.AccessToken);
 
-            var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                "http://localhost:57863/api/movies");
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            //var movies = stream.ReadAndDeserializeFromJson<List<Movie>>();
             using (var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
             {
-                var stream = await response.Content.ReadAsStreamAsync();
-                using (var streamReader = new StreamReader(stream))
-                {
-                    using (var jsonTextReader = new JsonTextReader(streamReader))
-                    {
-                        var jsonSerializer = new JsonSerializer();
-                        var users = jsonSerializer.Deserialize<List<User>>(jsonTextReader);
-                    }
-                }
+                //Read as stream
+                response.EnsureSuccessStatusCode();               
+                var jsonStream = await response.Content.ReadAsStreamAsync();
+                JObject newResult = new JObject();
+                var users = jsonStream.ReadAndDeserializeFromJson<User>();
+                Display(users);
             }
         }
+
+        public static void Display(List<User> results)
+        {
+            foreach (var child in results)
+            {
+                Console.WriteLine($"{child.DisplayName}");
+            }
+        }
+
 
     }
 

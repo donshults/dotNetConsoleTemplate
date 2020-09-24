@@ -1,7 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Graph;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace dotNetConsole.Services
@@ -36,6 +39,17 @@ namespace dotNetConsole.Services
                 return dateTime.DateTime;
         }
 
+        /// <summary>
+        /// Display the result of the Web API call
+        /// </summary>
+        /// <param name="result">Object to display</param>
+        //public static void Display(JObject result)
+        //{
+        //    foreach (JProperty child in result.Properties().Where(p => !p.Name.StartsWith("@")))
+        //    {
+        //        Console.WriteLine($"{child.Name} = {child.Value}");
+        //    }
+        //}
 
     }
 }
