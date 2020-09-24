@@ -1,11 +1,18 @@
 ﻿using dotNetConsole.Auth;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Graph;
 using Microsoft.Identity.Client;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Directory = System.IO.Directory;
 
 namespace dotNetConsole.Services
@@ -14,17 +21,24 @@ namespace dotNetConsole.Services
     {
         private readonly ICustomer _customer;
         private readonly IAuthenticationConfig _authConfig;
+        //private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IAPIClient _apiClient;
         private ConfigurationBuilder baseBuilder;
+
+        //private ProtectedApiCallHelper apiCaller;
+        //private HttpResponseMessage response;
 
         public IConfiguration _config { get; private set; }
 
-        public ConsoleApplication(ICustomer customer, IAuthenticationConfig authConfig)
+        public ConsoleApplication(ICustomer customer, IAuthenticationConfig authConfig, IAPIClient apiClient)
         {
             _customer = customer;
             _authConfig = authConfig;
+            //_httpClientFactory = httpClientFactory;
+            _apiClient = apiClient;
         }
 
-        public void Run()
+        public async Task Run()
         {
             _customer.CreateCustomer("Hello World");
             Console.WriteLine($"This is the customer Name: {_customer.CustomerName}");
@@ -40,9 +54,17 @@ namespace dotNetConsole.Services
 
             Log.Logger.Information($"Application Starting");
 
-            AuthenticationResult result = AuthenticateSvc();
+            AuthenticationResult result = await AuthenticateSvc();
 
+            _customer.CreateCustomer("Don");
+            Console.WriteLine($"New Customer Name: {_customer.CustomerName}");
             Log.Logger.Information($"{_config["hostUrl"]}");
+            Console.WriteLine($"Token: {result.AccessToken}");
+
+
+            // await _apiClient.GetMoviesWithHttpClientFromFactory();
+            await _apiClient.GetUsers(result, Display);
+            //await GetMoviesWithHttpClientFromFactory();
         }
 
         IConfiguration BuildConfig(ConfigurationBuilder builder)
@@ -57,7 +79,7 @@ namespace dotNetConsole.Services
             return config;
         }
 
-        private AuthenticationResult AuthenticateSvc()
+        private async Task<AuthenticationResult> AuthenticateSvc()
         {
             AuthenticationConfig config = _authConfig.ReadFromJsonFile("appsettings.json");
 
@@ -108,9 +130,61 @@ namespace dotNetConsole.Services
 
             //if (result != null)
             //{
-            //    var httpClient = new HttpClient();
-            //    var apiCaller = new ProtectedApiCallHelper(httpClient);
-            //    await apiCaller.CallWebApiAndProcessResultASync($"{config.ApiUrl}v1.0/users", result.AccessToken, Display);
+
+            //    //HttpClient httpClient = new HttpClient();
+            //    //HttpResponseMessage response = new HttpResponseMessage();
+            //    if (!string.IsNullOrEmpty(result.AccessToken))
+            //    {
+            //        var webApiUrl = $"{config.ApiUrl}v1.0/users";
+            //        var defaultRequestHeaders = _httpClient.DefaultRequestHeaders;
+            //        if (defaultRequestHeaders.Accept == null || !defaultRequestHeaders.Accept.Any(m => m.MediaType == "application/json"))
+            //        {
+            //            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            //        }
+            //        defaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", result.AccessToken);
+
+            //        var response = await _httpClient.GetAsync(webApiUrl);
+
+
+            //        //if (defaultRequestHeaders.Accept == null || !defaultRequestHeaders.Accept.Any(m => m.MediaType == "application/json"))
+            //        //{
+            //        //    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            //        //}
+            //        //defaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", result.AccessToken);
+            //        //var webApiUrl = $"{config.ApiUrl}v1.0/users";
+            //        //try
+            //        //{
+            //        //    response = await httpClient.GetAsync(webApiUrl);
+
+            //        //}
+            //        //catch (Exception ex)
+            //        //{
+
+            //        //    throw;
+            //        //}
+
+            //        if (response.IsSuccessStatusCode)
+            //        {
+            //            string json = await response.Content.ReadAsStringAsync();
+            //            JObject result1 = JsonConvert.DeserializeObject(json) as JObject;
+            //            Console.ForegroundColor = ConsoleColor.Gray;
+            //            Display(result1);
+            //        }
+            //        else
+            //        {
+            //            Console.ForegroundColor = ConsoleColor.Red;
+            //            Console.WriteLine($"Failed to call the Web Api: {response.StatusCode}");
+            //            string content = await response.Content.ReadAsStringAsync();
+
+            //            // Note that if you got reponse.Code == 403 and reponse.content.code == "Authorization_RequestDenied"
+            //            // this is because the tenant admin as not granted consent for the application to call the Web API
+            //            Console.WriteLine($"Content: {content}");
+            //        }
+            //        Console.ResetColor();
+
+            //    }
+            //    //apiCaller = new ProtectedApiCallHelper(httpClient);
+            //    //await apiCaller.CallWebApiAndProcessResultASync($"{config.ApiUrl}v1.0/users", result.AccessToken, Display);
             //}
             return result;
         }
@@ -173,5 +247,29 @@ namespace dotNetConsole.Services
                 Console.WriteLine($"{child.Name} = {child.Value}");
             }
         }
+
+        //public async Task GetMoviesWithHttpClientFromFactory()
+        //{
+        //    var httpClient = _httpClientFactory.CreateClient();
+
+        //    var request = new HttpRequestMessage(
+        //        HttpMethod.Get,
+        //        "http://localhost:57863/api/movies");
+        //    request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        //    //var movies = stream.ReadAndDeserializeFromJson<List<Movie>>();
+        //    using (var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
+        //    {
+        //        var stream = await response.Content.ReadAsStreamAsync();
+        //        using (var streamReader = new StreamReader(stream))
+        //        {
+        //            using (var jsonTextReader = new JsonTextReader(streamReader))
+        //            {
+        //                var jsonSerializer = new JsonSerializer();
+        //                var users = jsonSerializer.Deserialize<List<User>>(jsonTextReader);
+        //            }
+        //        }
+        //    }
+        //}
     }
 }

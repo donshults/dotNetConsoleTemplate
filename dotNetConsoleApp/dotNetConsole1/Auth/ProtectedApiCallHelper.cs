@@ -8,7 +8,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace dotNetConsole.Auth
+namespace dotNetConsole1.Auth
 {
     /// <summary>
     /// Helper class to call a protected API and process its result
@@ -43,10 +43,9 @@ namespace dotNetConsole.Auth
                     HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 }
                 defaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", accessToken);
+                HttpResponseMessage response = await HttpClient.GetAsync(webApiUrl);                
                 try
                 {
-                    HttpResponseMessage response = await HttpClient.GetAsync(webApiUrl);
-
                     if (response.IsSuccessStatusCode)
                     {
                         string json = await response.Content.ReadAsStringAsync();

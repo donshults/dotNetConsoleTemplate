@@ -2,6 +2,7 @@
 using dotNetConsole.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
@@ -20,25 +21,63 @@ namespace dotNetConsole
 
         static async Task Main(string[] args)
         {
+            var services = new ServiceCollection();
+            ConfigureService(services);
+
+            var serviceProvider = services.BuildServiceProvider();
+
             Console.WriteLine("Demo Console with DI");
             string testvalue = "Hello";
 
-            RegisterServices();
-            IServiceScope scope = _serviceProvider.CreateScope();
-            scope.ServiceProvider.GetRequiredService<ConsoleApplication>().Run();
-            DisposeServices();
+            try
+            {
+                await serviceProvider.GetService<ConsoleApplication>().Run();
+            }
+            catch (Exception ex)
+            {
+                var logger = serviceProvider.GetService<ILogger<Program>>();
+                throw;
+            }
+
+           // IServiceScope scope = _serviceProvider.CreateScope();
+           // scope.ServiceProvider.GetRequiredService<ConsoleApplication>().Run();
+           // DisposeServices();
+            
         }
 
-        private static void RegisterServices()
+        private static void ConfigureService(ServiceCollection services)
         {
-            var services = new ServiceCollection();
+            
             services.AddLogging();
-            services.AddHttpClient();
+            services.AddHttpClient("MoviesClient", client =>
+            {
+                client.BaseAddress = new Uri("http://localhost:57863");
+                client.Timeout = new TimeSpan(0, 0, 30);
+                client.DefaultRequestHeaders.Clear();
+            });
+            services.AddSingleton<IAPIClient, APIClient>();
             services.AddSingleton<ICustomer, Customer>();
             services.AddSingleton<IAuthenticationConfig, AuthenticationConfig>();
             services.AddSingleton<ConsoleApplication>();
             _serviceProvider = services.BuildServiceProvider(true);
         }
+
+        //private static void RegisterServices()
+        //{
+        //    var services = new ServiceCollection();
+        //    services.AddLogging();
+        //    services.AddHttpClient("MoviesClient", client =>
+        //    {
+        //        client.BaseAddress = new Uri("http://localhost:57863");
+        //        client.Timeout = new TimeSpan(0, 0, 30);
+        //        client.DefaultRequestHeaders.Clear();
+        //    });
+        //    //services.AddSingleton<IAPIClient, APIClient>();
+        //    services.AddSingleton<ICustomer, Customer>();
+        //    services.AddSingleton<IAuthenticationConfig, AuthenticationConfig>();
+        //    services.AddSingleton<ConsoleApplication>();
+        //    _serviceProvider = services.BuildServiceProvider(true);
+        //}
 
         private static void DisposeServices()
         {
